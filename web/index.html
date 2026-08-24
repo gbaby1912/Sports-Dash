@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sports-Dash · Tennis Match Predictor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%232a78d6'/%3E%3Cpath d='M4 16a12 12 0 0 1 24 0' stroke='%23fff' stroke-width='2.5' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">◕</div>
+    <div>
+      <h1>Sports-Dash</h1>
+      <div class="brand-sub">Calibrated ATP &amp; WTA match prediction</div>
+    </div>
+  </div>
+
+  <div class="seg" role="group" aria-label="Tour">
+    <button id="tour-atp" aria-pressed="true">ATP</button>
+    <button id="tour-wta" aria-pressed="false">WTA</button>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" aria-selected="true"  data-panel="predictor">Predictor</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="players">Players</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="rankings">Rankings</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="model">Model card</button>
+  </nav>
+</header>
+
+<main>
+  <div id="global-notice" class="notice hidden"></div>
+
+  <!-- ============================================================ PREDICTOR -->
+  <section id="panel-predictor" class="panel">
+    <div class="card">
+      <div class="card-head">
+        <h2>Matchup</h2>
+        <span class="card-note">Every input is a real pre-match feature — nothing here peeks at a result.</span>
+      </div>
+      <div class="controls">
+        <div class="field">
+          <label for="p1">Player 1</label>
+          <select id="p1"></select>
+        </div>
+        <div class="field">
+          <label for="p2">Player 2</label>
+          <select id="p2"></select>
+        </div>
+        <div class="field">
+          <label for="surface">Surface</label>
+          <select id="surface">
+            <option>Hard</option><option>Clay</option><option>Grass</option><option>Carpet</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="best-of">Format</label>
+          <select id="best-of">
+            <option value="3">Best of 3</option>
+            <option value="5">Best of 5</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="round">Round</label>
+          <select id="round">
+            <option>R128</option><option>R64</option><option selected>R32</option>
+            <option>R16</option><option>QF</option><option>SF</option><option>F</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="level">Event tier</label>
+          <select id="level">
+            <option value="G">Grand Slam</option>
+            <option value="M">Masters / WTA 1000</option>
+            <option value="A" selected>Tour level</option>
+            <option value="C">Challenger</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="tournament">Tournament</label>
+          <input type="text" id="tournament" value="Neutral Court"
+                 placeholder="e.g. Roland Garros" list="tournament-list">
+          <datalist id="tournament-list"></datalist>
+        </div>
+        <div class="field">
+          <label>Conditions</label>
+          <label class="check"><input type="checkbox" id="indoor"> Indoor court</label>
+        </div>
+      </div>
+    </div>
+
+    <div id="prediction-body" class="hidden">
+      <div class="card">
+        <div class="hero">
+          <div class="matchup">
+            <span class="who" id="hero-p1"><span class="swatch" style="background:var(--p1)"></span><span></span></span>
+            <span class="vs">versus</span>
+            <span class="who" id="hero-p2"><span class="swatch" style="background:var(--p2)"></span><span></span></span>
+          </div>
+          <div class="probbar" id="probbar" role="img" aria-label="Win probability split">
+            <div class="a"></div><div class="b"></div>
+          </div>
+          <p class="muted" id="hero-context" style="margin:12px 0 0"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Projected match shape</h2></div>
+        <div class="tiles" id="shape-tiles"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h3>What is driving this</h3>
+            <span class="card-note">log-odds shift</span>
+          </div>
+          <p class="muted" style="margin:-6px 0 12px">
+            Each category is neutralised as a block — the two players made level on
+            everything in it — and the model re-scored. The bar is how much of the
+            edge depends on that category.
+          </p>
+          <div class="legend">
+            <span><span class="swatch" style="background:var(--p1)"></span><span id="legend-p1"></span></span>
+            <span><span class="swatch" style="background:var(--p2)"></span><span id="legend-p2"></span></span>
+          </div>
+          <div class="rows" id="factors"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Likely scorelines</h3></div>
+          <p class="muted" style="margin:-6px 0 12px">
+            Set-score shape from the point model, rescaled so it agrees with the
+            ensemble's win probability.
+          </p>
+          <div class="rows" id="scores"></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Serve &amp; return matchup</h3></div>
+          <p class="muted" style="margin:-6px 0 12px">
+            Opponent-adjusted, on this surface. Raw percentages are shown alongside
+            so you can see how much of a player's record was schedule.
+          </p>
+          <div id="serve-chart" class="chart"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Model agreement</h3>
+            <span class="card-note">four independent views</span>
+          </div>
+          <p class="muted" style="margin:-6px 0 12px">
+            When the members disagree sharply the matchup is genuinely uncertain,
+            not just close.
+          </p>
+          <div class="rows" id="base-models"></div>
+          <div id="ratings-table" class="table-wrap" style="margin-top:16px"></div>
+        </div>
+      </div>
+    </div>
+    <div id="prediction-spinner" class="spinner">Pick two players to see a prediction.</div>
+  </section>
+
+  <!-- ============================================================== PLAYERS -->
+  <section id="panel-players" class="panel hidden">
+    <div class="card">
+      <div class="card-head"><h2>Player profile</h2></div>
+      <div class="controls">
+        <div class="field">
+          <label for="player-search">Search</label>
+          <input type="search" id="player-search" placeholder="Type a name…">
+        </div>
+        <div class="field">
+          <label for="player-pick">Player</label>
+          <select id="player-pick"></select>
+        </div>
+      </div>
+    </div>
+    <div id="profile-body"></div>
+  </section>
+
+  <!-- ============================================================= RANKINGS -->
+  <section id="panel-rankings" class="panel hidden">
+    <div class="card">
+      <div class="card-head">
+        <h2>Elo leaderboard</h2>
+        <span class="card-note">Surface ratings are blended toward overall Elo when the surface sample is thin.</span>
+      </div>
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+        <div class="seg" role="group" aria-label="Surface" id="rank-surface">
+          <button aria-pressed="true" data-surface="">Overall</button>
+          <button aria-pressed="false" data-surface="Hard">Hard</button>
+          <button aria-pressed="false" data-surface="Clay">Clay</button>
+          <button aria-pressed="false" data-surface="Grass">Grass</button>
+        </div>
+        <label class="check"><input type="checkbox" id="active-only" checked>
+          Active players only</label>
+      </div>
+      <p class="muted" style="margin:10px 0 0">
+        Elo only changes when a match is played, so a retired player keeps the
+        rating they walked away with. Unchecking this lets them back onto the board.
+      </p>
+      <div id="rankings-body" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <!-- ================================================================ MODEL -->
+  <section id="panel-model" class="panel hidden">
+    <div id="model-body"></div>
+  </section>
+</main>
+
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+<footer id="footer"></footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Data and model artifacts are rebuilt by `make data` / `make train`.
+# Ignore the *contents* rather than the directories themselves, so the .gitkeep
+# files survive and the expected layout is visible in a fresh clone. Ignoring
+# `data/raw/` outright would stop git descending into it at all, and the
+# negation below would never be reached.
+data/raw/*
+data/processed/*
+data/artifacts/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/artifacts/.gitkeep
