@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from ..config import LEVEL_WEIGHT, PROCESSED_DIR, SURFACES
-from . import sources
+from .sources import sackmann
 from .score import parse_score
 from .store import load_frame, save_frame
 from .venues import is_indoor, venue_altitude
@@ -217,7 +217,7 @@ def build_match_table(
     """Load every cached raw archive, normalise it, and persist the result."""
     frames = []
     for tour in tours:
-        raw = sources.load_cached_matches(tour)
+        raw = sackmann.load_cached_matches(tour)
         if raw.empty:
             log.warning("no cached raw data for %s", tour)
             continue

@@ -44,6 +44,15 @@ def cmd_fetch(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    """Report which data sources this machine can actually reach."""
+    from .data.sources.registry import diagnose, format_report
+
+    results = diagnose()
+    print(format_report(results))
+    return 0 if all(e["reachable"] for e in results if e["required"]) else 2
+
+
 def cmd_synth(args: argparse.Namespace) -> int:
     from .data.synthetic import generate_synthetic_archive
 
@@ -216,7 +225,13 @@ def build_parser() -> argparse.ArgumentParser:
     fetch.add_argument("--allow-partial", action="store_true")
     fetch.set_defaults(func=cmd_fetch)
 
-    synth = sub.add_parser("synth", help="generate an offline synthetic dataset")
+    doctor = sub.add_parser("doctor", help="check which data sources are reachable")
+    doctor.set_defaults(func=cmd_doctor)
+
+    synth = sub.add_parser(
+        "synth",
+        help="generate a synthetic dataset (TEST FIXTURE ONLY - not tour data)",
+    )
     synth.add_argument("--tours", nargs="+", default=tours)
     synth.add_argument("--start-year", type=int, default=2005)
     synth.add_argument("--end-year", type=int, default=2024)
